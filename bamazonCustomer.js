@@ -18,6 +18,15 @@ connection.connect(function (err) {
 });
 
 function showProducts() {
+    connection.query("SELECT * FROM products", function (err, results) {
+        for (var i = 0; i < results.length; i++) {
+            console.log("\nItem ID: " + result[i].item_id + " | " + "Product Name: ")
+        }
+        productInfo();
+    });
+}
+
+function productInfo() {
     inquirer.prompt([
         {
             name: "product",
@@ -28,15 +37,43 @@ function showProducts() {
             name: "stock_quantity",
             type: "input",
             message: "How many units of the product would you like to buy?",
-            validate: function (value) {
-                if (isNaN(value) === false) {
-                    return true;
-                }
-                return false;
-            }
+            // validate: function (value) {
+            //     if (isNaN(value) === false) {
+            //         return true;
+            //     }
+            //     return false;
+            // }
         }
-    ])
-        .then(function(answer) {
+    ]).then(function (res) {
+        var merch = res.product_name,
+        var stock_quantity2 = res.stock_quantity;
+
+        conncection.query("SELECT * FROM products WHERE ?", { item_id: merch },
+            function (err, response) {
+                if (err) throw err;
+
+                if (response.length === 0) {
+                    console.log("Please select valid Product Item ID");
+                    showProducts();
+                } else {
+                    var productResult = response[0];
+                    if (stock_quantity2 <= productResult.stock_quantity) {
+                        console.log("In Stock");
+
+                        var updateInventory = "Update products SET stock_quantity2= " + (productResult.stock_quantity-stock_quantity2) + "WHERE item_id = " + merch;
+
+                        connection.query(updateInventory, function (err, data) {
+                            if (err) throw err;
+                            console.log("Your order was placed successfully! Your total is $" + productResult * stock_quantity2);
+                            console.log("Thank you for shopping with us today!");
+                            continueShopping();
+                        })
+                    } 
+        }
+            })
+    }
+}
+        .then(function (answer) {
             // when finished prompting, insert a new item into the db with that info
             connection.query("SELECT * FROM products", function (err, results) {
                 if (err) throw err;
@@ -98,27 +135,10 @@ function showProducts() {
                     });
             })
         });
-    }
+}
 
 
-    // .then(function (res) {
-    //         var merch = res.product_name,
-    //         var stock_quantity2 = res.stock_quantity;
-
-    //         conncection.query("SELECT * FROM products WHERE ?", { item_id: merch },
-    //             function (err, response) {
-    //                 if (err) throw err;
-
-    //                 if (response.length === 0) {
-    //                     console.log("Select Item ID");
-    //                     showProducts();
-    //                 } else {
-    //                     var productResult = response[0];
-    //                     if (stock_quantity2 <= productResult.s)
-    //         }
-    //             })
-    //     }
-// }
+    
 
 // function createProducts() {
 //     console.log("Inserting a new product...\n");
