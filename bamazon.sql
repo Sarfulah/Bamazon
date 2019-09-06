@@ -42,3 +42,5 @@ VALUES ("bed in a bag", "home good", 80, 10);
 
 INSERT INTO products(product_name, department_name, price, stock_quantity)
 VALUES ("beach towel", "home good", 7.50, 12);
+
+SELECT * FROM products;

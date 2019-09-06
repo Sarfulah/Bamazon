@@ -1,5 +1,7 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
+
+//  Connect to SQL Database
 var connection = mysql.createConnection({
     host: "localhost",
 
@@ -24,9 +26,10 @@ function showProducts() {
         }
         productInfo();
     });
-    
+
 }
 
+// Item ID selection and Quantity amount
 function productInfo() {
     connection.query("SELECT * FROM products", function (err, results) {
         if (err) throw err;
@@ -34,210 +37,75 @@ function productInfo() {
             {
                 name: "product",
                 type: "input",
-                message: "What is the ID# of the product you would like to buy?"
+                message: "What is the ID# of the product you would like to buy?",
+                validate: function (value) {
+                    if (!isNaN(value) && value < 11) {
+                        return true;
+                    }
+                    return false;
+                }
             },
             {
                 name: "stock_quantity",
                 type: "input",
                 message: "How many units of the product would you like to buy?",
-                // validate: function (value) {
-                //     if (isNaN(value) === false) {
-                //         return true;
-                //     }
-                //     return false;
-                // }
+                validate: function (value) {
+                    if (!isNaN(value)) {
+                        return true;
+                    }
+                    return false;
+                }
             }
         ]).then(function (answer) {
-            var chosenItem;
-            for (var i = 0; i < results.length; i++) {
-                if (results[i].product_name === answer.choice) {
-                    chosenItem = results[i];
+
+            var chosenItem = answer.id;
+            console.log("Chosen item id: ", chosenItem);
+
+            var userQ = answer.quantity;
+            console.log("Chosen quantity from stock: ", userQ, "\n");
+
+            // Find stock quantity, and decline is input is greater then stock amount 
+            
+            connection.query("SELECT * FROM products", [{ item_id: answer.id }], function (err, results) {
+                
+                if (err) throw err;
+                // console.log(results);
+                if (results[0].stock_quantity - userQ >=0){
+                
                 }
-                console.log(answer.product);
-                console.log(answer.stock_quantity);
+                console.table(results);
+                var currQuan = results[0].stock_quantity;
+                console.log("Item quantity in stock: ", currQuan);
+                var price = results[0].price;
+                var remainQ = currQuan - answer.quantity;
+                console.log("Remaining Quantity: ", remainQ);
 
-                connection.query("SELECT * FROM products WHERE ?", { item_id: answer.product }, function (err, res) {
-                    if (err) throw err;
-                    console.log(res);
+                if (currQuan > answer.quantity) {
+                    console.log("Amount Remaining: " + remainQ);
+                    console.log("Total Purchase Cost: " + (answer.quantity * price));
 
-                    if (res[0].stock_quantity >= answer.stock_quantity) {
-                        var newStock = res[0].stock_quantity - answer.stock_quantity;
-                        connection.query(//update the database)
-                            "UPDATE products SET ? WHERE ?",
-                            [
-                                {
-                                    price: answer.stock_quantity
-                                },
-                                {
-                                    item_id: chosenItem
-                                }
-                            ],
-                            function (error) {
-                                if (error) throw err;
-                                console.log("Purchase was successful!");
-                                showProducts();
-                            }
-                        );
-                    }
-                    else {
-                        console.log("Insufficient quantity");
-                        showProducts();
-                    }
+                    connection.query("UPDATE products SET stock_quantity=? WHERE item_id=?",
+                    [
+                        remainQ, answer.id
+                    ],
 
-                });
+                    function (err, results) {
+                        console.table(results);
+                    });
 
-            }
+                    connection.query("SELECT * FROM products", function (err, results) {
+                        console.log("Updated quantity: ");
+                        console.table(results);
+                    });
 
-            // var merch = res.product_name,
-            // var stock_quantity2 = res.stock_quantity;
+                } else {
+                    console.log("Insufficient Quantity. Please update.");
+                }
 
-            // conncection.query("SELECT * FROM products WHERE ?", { item_id: merch },
-            //     function (err, response) {
-            //         if (err) throw err;
+                connection.end();
+            });
 
-            //         if (response.length === 0) {
-            //             console.log("Please select valid Product Item ID");
-            //             showProducts();
-            //         } else {
-            //             var productResult = response[0];
-            //             if (stock_quantity2 <= productResult.stock_quantity) {
-            //                 console.log("In Stock");
+        });
 
-            //                 var updateInventory = "Update products SET stock_quantity2= " + (productResult.stock_quantity-stock_quantity2) + "WHERE item_id = " + merch;
-
-            //                 connection.query(updateInventory, function (err, data) {
-            //                     if (err) throw err;
-            //                     console.log("Your order was placed successfully! Your total is $" + productResult * stock_quantity2);
-            //                     console.log("Thank you for shopping with us today!");
-            //                     continueShopping();
-            //                 })
-            //             } 
-            // }
-            //     })
-        })
-    })
+    });
 }
-// }
-// .then(function (answer) {
-//             // when finished prompting, insert a new item into the db with that info
-//             connection.query("SELECT * FROM products", function (err, results) {
-//                 if (err) throw err;
-//                 // once you have the items, prompt the user for which they'd like to purchase
-                // inquirer
-                //     .prompt([
-                //         {
-                //             name: "choice",
-                //             type: "input",
-                //             choices: function () {
-                //                 var choiceArray = [];
-                //                 for (var i = 0; i < results.length; i++) {
-                //                     choiceArray.push(results[i].item_name);
-                //                 }
-                //                 return choiceArray;
-                //             },
-                //             message: "What item would you like to purchase?"
-                //         }
-                        // {
-                        //   name: "purchase",
-                        //   type: "input",
-                        //   message: "How much would you like to bid?"
-                        // }
-                    // ])
-                    // .then(function (answer) {
-                    //     // get the information of the chosen item
-                    //     var chosenItem;
-                    //     for (var i = 0; i < results.length; i++) {
-                    //         if (results[i].product_name === answer.choice) {
-                    //             chosenItem = results[i];
-                    //         }
-                    //     }
-
-                        // determine if bid was high enough
-                        // if (chosenItem.price < parseInt(answer.price)) {
-                        //     // bid was high enough, so update db, let the user know, and start over
-                        //     connection.query(
-                        //         "UPDATE auctions SET ? WHERE ?",
-                        //         [
-                        //             {
-                        //                 price: price
-                        //             },
-                        //             {
-                        //                 id: chosenItem.id
-                        //             }
-                        //         ],
-                        //         function (error) {
-                        //             if (error) throw err;
-                        //             console.log("Purchase was successful!");
-                        //             showProducts();
-                        //         }
-                        //     );
-                        // }
-                        // else {
-
-                        //     console.log("Insufficient quantity");
-                        //     showProducts();
-                        // }
-//                     });
-//             })
-//         });
-// }
-
-
-
-
-// function createProducts() {
-//     console.log("Inserting a new product...\n");
-//     var query = connection.query(
-//         "INSERT INTO products SET ?",
-//         {
-//             product_name: "Girls Denim Jacket",
-//             department_name: "Clothing",
-//             price: 75,
-//             stock_quantity: 8
-//         },
-//         function (err, res) {
-//             if (err) throw err;
-//             console.log(res.affectedRows + "product inserted!\n");
-//             updatedProducts();
-//         }
-//     );
-//     console.log(query.sql);
-// }
-
-// function updatedProducts() {
-//     console.log("Updating all Girls Denim Jacket quantities...\n ");
-//     var query = connection.query(
-//         "UPDATE products SET ? WHERE ?",
-//         [{ stock_quantity: 11 }, { product_name: "Girls Denim Jacket" }],
-//         function (err, res) {
-//             if (err) throw err;
-//             console.log(res.affectedRows + "products updated!\n");
-//             deleteProduct();
-//         }
-//     );
-
-//     console.log(query.sql);
-// }
-// function deleteProduct() {
-//     console.log("...\n");
-//     connection.query(
-//         "DELETE FROM products WHERE ?",
-//         {
-//             product_name: ""
-//         },
-//         function (err, res) {
-//             if (err) throw err;
-//             console.log(res.affectedRows + " products deleted!\n");
-//             readProducts();
-//         }
-//     );
-// }
-
-// function readProducts() {
-//     console.log("Selecting all products...\n");
-//     connection.query("SELECT * FROM products", function (err, res) {
-//         if (err) throw err;
-//         console.log(res);
-//         connection.end();
-//     });
-// })
